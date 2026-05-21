@@ -1,5 +1,5 @@
 from stock_data import get_stock_data, get_multiple_stocks
-
+from analysis import calculate_percent_change
 
 def clean_symbols(user_input):
     symbols = user_input.upper().replace(" ", "").split(",")
@@ -34,6 +34,10 @@ def view_multiple_stocks():
         for symbol, data in stocks.items():
             print(f"\n===== {symbol} =====")
             print(data.head())
+def test_percent_change():
+    data = get_stock_data("AAPL")
+    change=calculate_percent_change(data)
+    print(f"\nAAPL Percent Change: {change}%")
 
 
 def main():
