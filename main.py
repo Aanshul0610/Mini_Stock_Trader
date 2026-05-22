@@ -1,6 +1,6 @@
 from stock_data import get_stock_data, get_multiple_stocks
 from analysis import get_stock_summary, compare_performance
-
+from charts import plot_stock_chart
 
 def clean_symbols(user_input):
     symbols = user_input.upper().replace(" ", "").split(",")
@@ -41,6 +41,11 @@ def view_one_stock():
         summary = get_stock_summary(data)
         print_stock_summary(symbol, summary)
 
+        show_graph=input("Do you want to see the graph? (y/n): ").lower().strip()
+
+        if show_graph == "y":
+            plot_stock_chart(data, symbol)
+
     except Exception as error:
         print(f"Error: {error}")
 
@@ -59,6 +64,11 @@ def view_multiple_stocks():
     for symbol, data in stocks.items():
         summary = get_stock_summary(data)
         print_stock_summary(symbol, summary)
+
+        show_graph = input(f"Show graph for {symbol}? yes/no: ").lower().strip()
+
+        if show_graph == "yes":
+            plot_stock_chart(data, symbol)
 
 
 def compare_stocks():
