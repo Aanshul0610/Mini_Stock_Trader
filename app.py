@@ -3,6 +3,8 @@ import streamlit as st
 from stock_data import get_stock_data, get_multiple_stocks
 from analysis import get_stock_summary, compare_performance
 from watchlist import load_watchlist, add_to_watchlist, remove_from_watchlist
+from news import get_stock_news
+from sentiment import analyze_sentiment
 
 
 st.set_page_config(
@@ -44,8 +46,57 @@ def show_stock_chart(data):
     st.line_chart(chart_data)
 
 
+def show_news_and_sentiment(symbol):
+    st.subheader(f"{symbol} News & Sentiment")
+
+    try:
+        news_items = get_stock_news(symbol, limit=5)
+
+        if len(news_items) == 0:
+            st.info("No news found for this ticker.")
+            return
+
+        total_score = 0
+
+        for item in news_items:
+            title = item["title"]
+            publisher = item["publisher"]
+            link = item["link"]
+
+            sentiment = analyze_sentiment(title)
+            total_score += sentiment["score"]
+
+            st.write("---")
+            st.write(f"**{title}**")
+            st.write(f"Publisher: {publisher}")
+            st.write(f"Sentiment: **{sentiment['label']}**")
+            st.write(f"Sentiment Score: {sentiment['score']}")
+
+            if link != "":
+                st.link_button("Read Article", link)
+
+        average_score = total_score / len(news_items)
+
+        if average_score > 0.05:
+            overall_sentiment = "Positive"
+        elif average_score < -0.05:
+            overall_sentiment = "Negative"
+        else:
+            overall_sentiment = "Neutral"
+
+        st.write("---")
+        st.metric("Overall News Sentiment", overall_sentiment)
+        st.write(f"Average Sentiment Score: {round(average_score, 3)}")
+
+    except Exception as error:
+        st.error(f"Could not load news: {error}")
+
+
 st.title("Mini Stock Tracker")
-st.write("Analyze stocks, compare performance, and save a watchlist.")
+st.write("Analyze stocks, compare performance, save a watchlist, and check news sentiment.")
+
+
+# ---------------- SIDEBAR WATCHLIST ----------------
 
 st.sidebar.header("Watchlist")
 
@@ -55,8 +106,9 @@ if len(watchlist) == 0:
     st.sidebar.write("No stocks saved yet.")
 else:
     st.sidebar.write("Saved stocks:")
-    for symbol in watchlist:
-        st.sidebar.write(f"- {symbol}")
+
+    for saved_symbol in watchlist:
+        st.sidebar.write(f"- {saved_symbol}")
 
 st.sidebar.divider()
 
@@ -75,8 +127,17 @@ with col_remove:
         st.rerun()
 
 
-tab1, tab2, tab3 = st.tabs(["Single Stock", "Multiple Stocks", "Compare Stocks"])
+# ---------------- TABS ----------------
 
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Single Stock",
+    "Multiple Stocks",
+    "Compare Stocks",
+    "News Sentiment"
+])
+
+
+# ---------------- SINGLE STOCK TAB ----------------
 
 with tab1:
     symbol = st.text_input("Enter stock ticker", value="AAPL").upper().strip()
@@ -94,12 +155,16 @@ with tab1:
                 st.subheader("Price Chart")
                 show_stock_chart(data)
 
-                st.subheader("Raw Data")
+                st.subheader("Recent Data")
                 st.dataframe(data.tail())
+
+                show_news_and_sentiment(symbol)
 
             except Exception as error:
                 st.error(f"Error: {error}")
 
+
+# ---------------- MULTIPLE STOCKS TAB ----------------
 
 with tab2:
     tickers_input = st.text_input(
@@ -126,6 +191,11 @@ with tab2:
                 with st.expander(f"Show chart for {symbol}"):
                     show_stock_chart(data)
 
+                with st.expander(f"Show news sentiment for {symbol}"):
+                    show_news_and_sentiment(symbol)
+
+
+# ---------------- COMPARE STOCKS TAB ----------------
 
 with tab3:
     compare_input = st.text_input(
@@ -152,10 +222,20 @@ with tab3:
 
                 st.subheader("Performance Comparison")
 
-                st.write("Percent Change:")
-
                 for symbol, percent_change in comparison["performance"].items():
                     st.write(f"**{symbol}:** {percent_change}%")
 
                 st.success(f"Best Performer: {comparison['best_stock']}")
                 st.warning(f"Worst Performer: {comparison['worst_stock']}")
+
+
+# ---------------- NEWS SENTIMENT TAB ----------------
+
+with tab4:
+    news_symbol = st.text_input("Enter ticker for news sentiment", value="AAPL").upper().strip()
+
+    if st.button("Get News Sentiment"):
+        if news_symbol == "":
+            st.error("Please enter a ticker.")
+        else:
+            show_news_and_sentiment(news_symbol)
